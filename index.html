@@ -246,7 +246,7 @@
     <div id="chat-screen">
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
             <h2 id="network-title" style="color: var(--accent-color); text-transform: uppercase;">NETWORK</h2>
-            <span id="system-status" style="color: #888; font-size: 0.8em; font-style: italic;"></span>
+            <span id="system-status" style="color: #ffaa00; font-size: 0.85em; font-weight: bold; padding: 5px 10px; border-radius: 5px; background: rgba(255,170,0,0.1); transition: all 0.3s;">🟡 Searching for peers...</span>
         </div>
         
         <div class="chat-box" id="chatBox"></div>
@@ -291,7 +291,27 @@
             document.getElementById('form-join').style.display = type === 'join' ? 'block' : 'none';
         }
 
+        // --- DYNAMIC STATUS POLLING ---
+        function fetchStatus() {
+            fetch('/status').then(res => res.json()).then(data => {
+                const statusSpan = document.getElementById('system-status');
+                if(data.connected) {
+                    statusSpan.innerText = "🟢 Connected & Secure";
+                    statusSpan.style.color = "#00ffcc";
+                    statusSpan.style.background = "rgba(0, 255, 204, 0.1)";
+                } else {
+                    statusSpan.innerText = "🟡 Searching for peers...";
+                    statusSpan.style.color = "#ffaa00";
+                    statusSpan.style.background = "rgba(255, 170, 0, 0.1)";
+                }
+            });
+        }
+
         // --- NETWORK LOGIC ---
+        let knownMessagesCount = 0;
+        let pollInterval;
+        let statusInterval;
+
         function joinNetwork(action) {
             const username = document.getElementById('username').value.trim();
             if (!username) { alert("Please enter an Operative Name."); return; }
@@ -317,8 +337,15 @@
                 document.getElementById('chat-screen').style.display = 'flex';
                 document.getElementById('fab-bar').style.display = 'flex';
                 document.getElementById('network-title').innerText = data.company + " NET";
-                document.getElementById('system-status').innerText = data.status;
-                setInterval(fetchMessages, 1000);
+                
+                // Clear chat visually when joining a new network
+                document.getElementById('chatBox').innerHTML = '';
+                knownMessagesCount = 0;
+                
+                // Start polling logic
+                fetchStatus();
+                if(!statusInterval) statusInterval = setInterval(fetchStatus, 2000);
+                if(!pollInterval) pollInterval = setInterval(fetchMessages, 1000);
             });
         }
 
@@ -333,7 +360,6 @@
             }
         }
 
-        let knownMessagesCount = 0;
         function fetchMessages() {
             fetch('/messages').then(res => res.json()).then(data => {
                 if (data.length > knownMessagesCount) {
