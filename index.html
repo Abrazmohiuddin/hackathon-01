@@ -5,255 +5,367 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEXUS | Enterprise Mesh Node</title>
     <style>
+        /* --- 3D THEME VARIABLES --- */
         :root {
-            --bg: #0a0e17;
-            --panel: #131a26;
-            --accent: #ff4757; 
-            --text-main: #e2e8f0;
-            --text-muted: #64748b;
-            --alert: #ff4757;
-            --relay: #00ffcc;
+            --bg-color: #1e2024;
+            --text-color: #e0e0e0;
+            --card-bg: #25282c;
+            --shadow-light: #2c3035;
+            --shadow-dark: #141618;
+            --accent-color: #ff3366;
+            --ai-color: #b537f2;
+            --input-bg: #1a1c1f;
+            --icon-color: #e0e0e0;
         }
 
-        body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--bg); color: var(--text-main); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .terminal-container { width: 100%; max-width: 600px; background: var(--panel); border: 1px solid rgba(255, 71, 87, 0.2); border-radius: 12px; box-shadow: 0 0 30px rgba(0, 0, 0, 0.8); display: flex; flex-direction: column; overflow: hidden; position: relative; height: 600px; }
+        [data-theme="light"] {
+            --bg-color: #e0e6ed;
+            --text-color: #2d3436;
+            --card-bg: #eef2f7;
+            --shadow-light: #ffffff;
+            --shadow-dark: #b8c2cc;
+            --accent-color: #ff3366;
+            --ai-color: #8e24aa;
+            --input-bg: #d1d8e0;
+            --icon-color: #2d3436;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background 0.3s, color 0.3s; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* --- 4 CIRCULAR SVG BUTTONS (TOP RIGHT) --- */
+        .fab-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .circle-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: none;
+            background: var(--card-bg);
+            cursor: pointer;
+            box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .circle-btn:active {
+            box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+            transform: translateY(2px);
+        }
+
+        .circle-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: var(--icon-color);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* --- 3D CARDS & BUTTONS --- */
+        .card-3d {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .btn-3d {
+            width: 100%;
+            padding: 15px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 10px;
+            background: var(--card-bg);
+            color: var(--accent-color);
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+            transition: all 0.2s ease;
+        }
+
+        .btn-3d.secondary {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            box-shadow: none;
+        }
+
+        .btn-3d:active {
+            box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+            color: var(--text-color);
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 10px;
+            background: var(--input-bg);
+            color: var(--text-color);
+            box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+            outline: none;
+        }
+
+        /* --- MODAL --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 10px 10px 20px var(--shadow-dark);
+            max-width: 400px;
+        }
+
+        /* --- CHAT INTERFACE --- */
+        #chat-screen {
+            display: none;
+            width: 95%;
+            max-width: 900px;
+            height: 85vh;
+            flex-direction: column;
+            gap: 20px;
+        }
         
-        /* --- MULTI-STEP GATEWAY STYLES --- */
-        .gateway-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--panel); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
-        .auth-box { border: 1px solid var(--accent); padding: 30px; border-radius: 8px; background: rgba(0,0,0,0.4); text-align: center; width: 85%; }
-        .auth-title { color: var(--accent); margin-top: 0; font-family: monospace; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 20px; text-transform: uppercase; }
+        .chat-box {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .msg-bubble {
+            padding: 15px;
+            border-radius: 10px;
+            background: var(--bg-color);
+            box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+            max-width: 80%;
+            align-self: flex-start;
+        }
+
+        .msg-bubble.system { color: #888; font-style: italic; align-self: center; box-shadow: none; background: transparent; }
+        .sender-id { font-size: 0.8em; font-weight: bold; color: var(--accent-color); margin-bottom: 5px; display: block; }
         
-        .instruction-box { background: rgba(255,255,255,0.05); padding: 15px; border-left: 3px solid var(--accent); font-size: 0.85rem; text-align: left; margin-bottom: 20px; line-height: 1.4; color: var(--text-muted); }
-        .instruction-box strong { color: var(--text-main); }
-
-        .auth-input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: white; outline: none; box-sizing: border-box; font-family: monospace; }
-        .auth-input:focus { border-color: var(--accent); }
+        .input-area { display: flex; gap: 15px; }
+        .input-area input { margin-top: 0; }
+        .input-area button { width: 120px; margin-top: 0; }
         
-        .btn-group { display: flex; gap: 10px; width: 100%; margin-top: 10px; }
-        .auth-btn { flex: 1; padding: 15px; background: rgba(255, 71, 87, 0.1); color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; font-weight: bold; letter-spacing: 1px; transition: 0.3s; text-transform: uppercase; }
-        .auth-btn:hover { background: var(--accent); color: white; }
-        .btn-back { background: transparent; border-color: var(--text-muted); color: var(--text-muted); flex: 0.3; }
-        .btn-back:hover { background: var(--text-muted); color: var(--bg); }
-
-        /* The Startup Overlay */
-        #startup-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--panel); z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; font-family: monospace; color: var(--accent); transition: opacity 0.8s ease-out; }
-        .loader-text { font-size: 1.1rem; letter-spacing: 2px; margin-bottom: 20px; text-align: center; line-height: 1.5; }
-        .progress-bar { width: 250px; height: 4px; background: rgba(255, 71, 87, 0.1); border-radius: 2px; overflow: hidden; }
-        .progress-fill { height: 100%; width: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: scan 1.5s infinite alternate ease-in-out; }
-
-        /* Main App Styles */
-        .header { background: rgba(0, 0, 0, 0.4); padding: 15px 20px; border-bottom: 1px solid rgba(255, 71, 87, 0.2); display: flex; justify-content: space-between; align-items: center; }
-        .title { margin: 0; font-size: 1.1rem; font-weight: 600; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; }
-        .status-badge { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-        .pulse-dot { width: 8px; height: 8px; background-color: var(--alert); border-radius: 50%; box-shadow: 0 0 10px var(--alert); animation: pulse 2s infinite; }
-
-        #chat-box { flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
-        .msg-bubble { background: rgba(255, 255, 255, 0.03); padding: 12px 16px; border-radius: 8px; border-left: 4px solid var(--accent); width: fit-content; max-width: 85%; word-wrap: break-word; animation: fadeIn 0.3s ease-out; }
-        .msg-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 20px; }
-        .sender-id { font-size: 0.8rem; color: var(--accent); font-family: monospace; font-weight: bold; }
-        .hop-tag { font-size: 0.7rem; color: var(--text-muted); font-style: italic; }
-        .msg-text { font-size: 0.95rem; line-height: 1.4; }
-
-        .input-area { display: flex; padding: 15px; background: rgba(0, 0, 0, 0.4); border-top: 1px solid rgba(255, 71, 87, 0.1); gap: 10px; }
-        #msg-input { flex-grow: 1; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: white; outline: none; }
-        button.send-btn { padding: 0 20px; background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; font-weight: 600; text-transform: uppercase; transition: 0.3s; }
-        button.send-btn:hover { background: var(--accent); color: white; }
-        
-        .operative-info { font-size: 0.75rem; color: var(--text-muted); font-family: monospace; margin-top: 5px; }
-        .operative-name { color: var(--accent); font-weight: bold; }
+        /* Form groups */
+        .form-group { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--shadow-dark); }
     </style>
 </head>
 <body>
 
-    <div class="terminal-container">
+    <!-- 4 Circular SVG Buttons -->
+    <div class="fab-container" id="fab-bar" style="display: none;">
+        <button class="circle-btn" id="theme-toggle" title="Toggle Light/Dark Mode">
+            <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+        <button class="circle-btn" id="about-toggle" title="About NEXUS">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        </button>
+        <button class="circle-btn" id="status-btn" title="Network Status">
+            <svg viewBox="0 0 24 24" style="stroke: #00ffcc;"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+        </button>
+        <button class="circle-btn" onclick="location.reload()" title="Disconnect">
+            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        </button>
+    </div>
+
+    <!-- Login/Join Screen -->
+    <div id="login-screen" class="card-3d">
+        <h1 style="color: var(--accent-color); letter-spacing: 3px; margin-bottom: 20px;">NEXUS</h1>
+        <p style="font-size: 0.9em; margin-bottom: 20px;">Decentralized Mesh Architecture</p>
         
-        <div id="gateway-main" class="gateway-panel">
-            <div class="auth-box">
-                <h2 class="auth-title">NEXUS ENTERPRISE</h2>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px;">Mesh-inspired decentralized communication architecture.</p>
-                <button class="auth-btn" style="margin-bottom: 15px;" onclick="showPanel('gateway-create')">Create Company Network</button>
-                <button class="auth-btn" style="background: transparent;" onclick="showPanel('gateway-join')">Join Existing Network</button>
-            </div>
-        </div>
-
-        <div id="gateway-create" class="gateway-panel" style="display: none;">
-            <div class="auth-box">
-                <h2 class="auth-title">HOST NETWORK</h2>
-                <div class="instruction-box">
-                    <strong>SYSTEM DIRECTIVE:</strong><br>
-                    1. Open your device's Wi-Fi settings.<br>
-                    2. Turn ON your <strong>Mobile Hotspot</strong>.<br>
-                    3. Define your company environment below.
-                </div>
-                <input type="text" id="create-company" class="auth-input" placeholder="Company Name (e.g. ALPHA CORP)">
-                <input type="password" id="create-key" class="auth-input" placeholder="Set Security Key">
-                <input type="text" id="create-user" class="auth-input" placeholder="Your Operative ID">
-                <div class="btn-group">
-                    <button class="auth-btn btn-back" onclick="showPanel('gateway-main')">Back</button>
-                    <button class="auth-btn" onclick="submitAuth('create')">Initialize Host</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="gateway-join" class="gateway-panel" style="display: none;">
-            <div class="auth-box">
-                <h2 class="auth-title">JOIN NETWORK</h2>
-                <div class="instruction-box">
-                    <strong>SYSTEM DIRECTIVE:</strong><br>
-                    1. Open your device's Wi-Fi settings.<br>
-                    2. Connect to the Host's Hotspot.<br>
-                    3. Enter company credentials to sync.
-                </div>
-                <input type="text" id="join-company" class="auth-input" placeholder="Company Name">
-                <input type="password" id="join-key" class="auth-input" placeholder="Security Key">
-                <input type="text" id="join-user" class="auth-input" placeholder="Your Operative ID">
-                <div class="btn-group">
-                    <button class="auth-btn btn-back" onclick="showPanel('gateway-main')">Back</button>
-                    <button class="auth-btn" onclick="submitAuth('join')">Sync to Node</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="startup-overlay">
-            <div class="loader-text" id="loader-msg">SCANNING AIRWAVES...<br>VALIDATING COMPANY CRYPTO-KEY</div>
-            <div class="progress-bar"><div class="progress-fill" id="p-fill"></div></div>
-        </div>
-
-        <div class="header">
-            <div>
-                <h2 class="title" id="network-title">NEXUS MESH</h2>
-                <div class="operative-info" id="op-display">Operative: <span class="operative-name">N/A</span></div>
-            </div>
-            <div class="status-badge">
-                <div class="pulse-dot" id="status-dot"></div>
-                <span id="status-text">SEARCHING...</span>
-            </div>
+        <input type="text" id="username" placeholder="Enter your Operative Name">
+        
+        <div style="margin-top: 30px;" id="main-actions">
+            <button class="btn-3d" onclick="joinNetwork('public')">JOIN PUBLIC MESH</button>
+            <button class="btn-3d secondary" onclick="showForm('create')">CREATE PRIVATE NETWORK</button>
+            <button class="btn-3d secondary" onclick="showForm('join')">JOIN EXISTING NETWORK</button>
         </div>
         
-        <div id="chat-box">
-            <div class="msg-bubble" style="border-left-color: var(--text-muted);">
-                <div class="msg-header"><span class="sender-id" style="color: var(--text-muted);">SYSTEM</span></div>
-                <div class="msg-text" style="color: var(--text-muted); font-style: italic;">Cryptographic handshake complete. Offline Mesh initialized.</div>
-            </div>
+        <!-- Create Network Form -->
+        <div id="form-create" class="form-group">
+            <h3 style="color: var(--accent-color); font-size: 14px;">INITIALIZE NEW MESH</h3>
+            <input type="text" id="create-company" placeholder="New Network Name">
+            <input type="password" id="create-key" placeholder="Create Security Key">
+            <button class="btn-3d" onclick="joinNetwork('create')">INITIALIZE</button>
+            <p style="font-size: 12px; margin-top: 10px; cursor: pointer; color: #888;" onclick="showForm('none')">Cancel</p>
         </div>
 
+        <!-- Join Network Form -->
+        <div id="form-join" class="form-group">
+            <h3 style="color: var(--accent-color); font-size: 14px;">CONNECT TO SECURE MESH</h3>
+            <input type="text" id="join-company" placeholder="Network Name">
+            <input type="password" id="join-key" placeholder="Security Key">
+            <button class="btn-3d" onclick="joinNetwork('join')">CONNECT</button>
+            <p style="font-size: 12px; margin-top: 10px; cursor: pointer; color: #888;" onclick="showForm('none')">Cancel</p>
+        </div>
+    </div>
+
+    <!-- Chat Screen -->
+    <div id="chat-screen">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
+            <h2 id="network-title" style="color: var(--accent-color); text-transform: uppercase;">NETWORK</h2>
+            <span id="system-status" style="color: #888; font-size: 0.8em; font-style: italic;"></span>
+        </div>
+        
+        <div class="chat-box" id="chatBox"></div>
+        
         <div class="input-area">
-            <input type="text" id="msg-input" placeholder="Transmit packet... (Use @username for secure DM)" onkeypress="handleKeyPress(event)" autocomplete="off">
-            <button class="send-btn" onclick="sendMessage()">Send</button>
+            <input type="text" id="messageInput" placeholder="Transmit packet... (Use @username for secure DM)">
+            <button class="btn-3d" onclick="sendMessage()">SEND</button>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-content">
+            <h2 style="color: var(--accent-color); margin-bottom: 15px;">ABOUT NEXUS</h2>
+            <p style="margin-bottom: 15px; line-height: 1.5;">NEXUS is an edge-compute mesh network. It utilizes delay-tolerant networking to allow encrypted peer-to-peer communication without central cellular infrastructure.</p>
+            <p style="margin-bottom: 25px; font-size: 0.8em; color: #888;">Version 2.0 - 3D UI Update</p>
+            <button class="btn-3d" onclick="document.getElementById('aboutModal').style.display='none'">CLOSE</button>
         </div>
     </div>
 
     <script>
-        let lastMessageCount = 0;
-        let isConnected = false;
-        let fetchInterval = null;
+        // --- THEME TOGGLE LOGIC ---
+        const themeBtn = document.getElementById('theme-toggle');
+        themeBtn.addEventListener('click', () => {
+            const body = document.body;
+            if (body.getAttribute('data-theme') === 'light') {
+                body.removeAttribute('data-theme');
+            } else {
+                body.setAttribute('data-theme', 'light');
+            }
+        });
 
-        // Auto-fill previous username
-        const savedUser = localStorage.getItem('mesh_username') || '';
-        document.getElementById('create-user').value = savedUser;
-        document.getElementById('join-user').value = savedUser;
+        // --- ABOUT MODAL LOGIC ---
+        document.getElementById('about-toggle').addEventListener('click', () => {
+            document.getElementById('aboutModal').style.display = 'flex';
+        });
 
-        function showPanel(panelId) {
-            document.querySelectorAll('.gateway-panel').forEach(p => p.style.display = 'none');
-            document.getElementById(panelId).style.display = 'flex';
+        // --- UI LOGIC (CREATE VS JOIN FORMS) ---
+        function showForm(type) {
+            document.getElementById('main-actions').style.display = type === 'none' ? 'block' : 'none';
+            document.getElementById('form-create').style.display = type === 'create' ? 'block' : 'none';
+            document.getElementById('form-join').style.display = type === 'join' ? 'block' : 'none';
         }
 
-        function submitAuth(type) {
-            const company = document.getElementById(type + '-company').value.trim();
-            const key = document.getElementById(type + '-key').value.trim();
-            const username = document.getElementById(type + '-user').value.trim();
-            
-            if (!company || !key || !username) return alert("All fields are required to establish secure link.");
+        // --- NETWORK LOGIC ---
+        function joinNetwork(action) {
+            const username = document.getElementById('username').value.trim();
+            if (!username) { alert("Please enter an Operative Name."); return; }
 
-            localStorage.setItem('mesh_username', username);
+            let payload = { username: username, action: action };
+
+            if (action === 'create') {
+                payload.company = document.getElementById('create-company').value.trim();
+                payload.key = document.getElementById('create-key').value.trim();
+                if (!payload.company || !payload.key) { alert("Network Name and Key required."); return; }
+            } else if (action === 'join') {
+                payload.company = document.getElementById('join-company').value.trim();
+                payload.key = document.getElementById('join-key').value.trim();
+                if (!payload.company || !payload.key) { alert("Network Name and Key required."); return; }
+            }
 
             fetch('/join_network', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ company: company, key: key, username: username }) 
-            }).then(() => {
-                document.querySelectorAll('.gateway-panel').forEach(p => p.style.display = 'none');
-                document.getElementById('startup-overlay').style.display = 'flex';
-                
-                document.getElementById('network-title').innerText = company.toUpperCase() + " NET";
-                document.querySelector('.operative-name').innerText = "@" + username;
-
-                setInterval(checkNetworkStatus, 2000);
+                body: JSON.stringify(payload)
+            }).then(res => res.json()).then(data => {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('chat-screen').style.display = 'flex';
+                document.getElementById('fab-bar').style.display = 'flex';
+                document.getElementById('network-title').innerText = data.company + " NET";
+                document.getElementById('system-status').innerText = data.status;
                 setInterval(fetchMessages, 1000);
             });
         }
 
-        function checkNetworkStatus() {
-            fetch('/status').then(res => res.json()).then(data => {
-                const overlay = document.getElementById('startup-overlay');
-                const msg = document.getElementById('loader-msg');
-                const fill = document.getElementById('p-fill');
-                const statusText = document.getElementById('status-text');
-                const statusDot = document.getElementById('status-dot');
-
-                if (data.connected && !isConnected) {
-                    isConnected = true;
-                    fill.style.animation = 'none'; fill.style.width = '100%';
-                    msg.innerText = "PEER DISCOVERED. SECURE LINK ESTABLISHED.";
-                    msg.style.color = "var(--relay)";
-                    statusText.innerText = "SECURE";
-                    statusDot.style.backgroundColor = "var(--relay)"; 
-                    statusDot.style.boxShadow = "0 0 10px var(--relay)";
-                    setTimeout(() => { overlay.style.opacity = '0'; setTimeout(() => overlay.style.display = 'none', 800); }, 1200);
-                } else if (!data.connected && isConnected) {
-                    isConnected = false;
-                    statusText.innerText = "SEARCHING...";
-                    statusDot.style.backgroundColor = "var(--alert)"; 
-                    statusDot.style.boxShadow = "0 0 10px var(--alert)";
-                }
-            });
-        }
-
         function sendMessage() {
-            const inputField = document.getElementById('msg-input');
-            const text = inputField.value.trim();
-            if (!text) return;
-            fetch('/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text }) 
-            }).then(() => { inputField.value = ''; fetchMessages(); });
+            const input = document.getElementById('messageInput');
+            if (input.value.trim()) {
+                fetch('/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: input.value })
+                }).then(() => input.value = '');
+            }
         }
 
-        function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
-
+        let knownMessagesCount = 0;
         function fetchMessages() {
             fetch('/messages').then(res => res.json()).then(data => {
-                const chatBox = document.getElementById('chat-box');
-                if (data.length > lastMessageCount) {
-                    chatBox.innerHTML = chatBox.firstElementChild.outerHTML; 
-                    data.forEach(msg => {
-                        let boxStyle = `border-left-color: var(--accent);`;
-                        let headerHtml = `<span class="sender-id" style="color: var(--accent);">@${msg.username}</span>`;
-                        let hopInfo = msg.hops > 0 ? `<span class="hop-tag">Relayed via ${msg.hops} node(s)</span>` : `<span class="hop-tag">Direct Radio</span>`;
-
-                        if (msg.username === localStorage.getItem('mesh_username')) {
-                            headerHtml = `<span class="sender-id" style="color: #ffffff;">(You) @${msg.username}</span>`;
-                        }
+                if (data.length > knownMessagesCount) {
+                    const chatBox = document.getElementById('chatBox');
+                    let newHtml = '';
+                    for (let i = knownMessagesCount; i < data.length; i++) {
+                        const msg = data[i];
+                        let headerHtml = `<span class="sender-id">@${msg.username}</span>`;
+                        let boxStyle = "";
 
                         if (msg.is_dm) {
-                            headerHtml = `<span class="sender-id" style="color: #ffaa00;">[ENCRYPTED DM]</span>`;
-                            boxStyle = `border-left-color: #ffaa00; background: rgba(255, 170, 0, 0.05);`;
+                            headerHtml = `<span class="sender-id" style="color: #ffaa00;">🔒 [ENCRYPTED DM] @${msg.username}</span>`;
+                            boxStyle = `border: 1px solid #ffaa00;`;
                         }
 
-                        // --- NEW: SPECIAL VISUALS FOR THE AI ---
                         if (msg.username === "NEXUS-AI") {
-                            headerHtml = `<span class="sender-id" style="color: #b537f2;">⚡ [EDGE COMPUTE NODE] @NEXUS-AI</span>`;
-                            boxStyle = `border-left-color: #b537f2; background: rgba(181, 55, 242, 0.08); box-shadow: 0 0 10px rgba(181, 55, 242, 0.2);`;
+                            headerHtml = `<span class="sender-id" style="color: var(--ai-color);">⚡ [EDGE COMPUTE NODE] @NEXUS-AI</span>`;
+                            boxStyle = `border: 1px solid var(--ai-color); box-shadow: 0 0 10px rgba(181, 55, 242, 0.2);`;
                         }
 
-                        chatBox.innerHTML += `<div class="msg-bubble" style="${boxStyle}"><div class="msg-header">${headerHtml} ${hopInfo}</div><div class="msg-text">${msg.text}</div></div>`;
-                    });
-                    lastMessageCount = data.length;
+                        newHtml += `<div class="msg-bubble" style="${boxStyle}">${headerHtml} <div style="white-space: pre-wrap;">${msg.text}</div></div>`;
+                    }
+                    chatBox.innerHTML += newHtml;
+                    knownMessagesCount = data.length;
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
             });
         }
+        
+        document.getElementById("messageInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") { event.preventDefault(); sendMessage(); }
+        });
     </script>
 </body>
 </html>
