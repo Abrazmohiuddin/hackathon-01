@@ -241,6 +241,12 @@
                             boxStyle = `border-left-color: #ffaa00; background: rgba(255, 170, 0, 0.05);`;
                         }
 
+                        // --- NEW: SPECIAL VISUALS FOR THE AI ---
+                        if (msg.username === "NEXUS-AI") {
+                            headerHtml = `<span class="sender-id" style="color: #b537f2;">⚡ [EDGE COMPUTE NODE] @NEXUS-AI</span>`;
+                            boxStyle = `border-left-color: #b537f2; background: rgba(181, 55, 242, 0.08); box-shadow: 0 0 10px rgba(181, 55, 242, 0.2);`;
+                        }
+
                         chatBox.innerHTML += `<div class="msg-bubble" style="${boxStyle}"><div class="msg-header">${headerHtml} ${hopInfo}</div><div class="msg-text">${msg.text}</div></div>`;
                     });
                     lastMessageCount = data.length;
