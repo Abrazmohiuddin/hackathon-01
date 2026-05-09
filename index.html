@@ -3,242 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXUS | Tactical Mesh Node</title>
+    <title>NEXUS | Secure Mesh Node</title>
     <style>
         :root {
             --bg: #0a0e17;
             --panel: #131a26;
-            --accent: #00d2ff;
+            --accent: #ff4757; /* Updated to Red based on your UI screenshot */
             --text-main: #e2e8f0;
             --text-muted: #64748b;
             --alert: #ff4757;
             --relay: #00ffcc;
         }
 
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--bg); color: var(--text-main); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .terminal-container { width: 100%; max-width: 600px; background: var(--panel); border: 1px solid rgba(255, 71, 87, 0.2); border-radius: 12px; box-shadow: 0 0 30px rgba(0, 0, 0, 0.8); display: flex; flex-direction: column; overflow: hidden; position: relative; height: 600px; }
+        
+        /* --- NEW: Security Gateway Overlay --- */
+        #auth-gateway { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--panel); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .auth-box { border: 1px solid var(--accent); padding: 30px; border-radius: 8px; background: rgba(0,0,0,0.4); text-align: center; width: 80%; }
+        .auth-title { color: var(--accent); margin-top: 0; font-family: monospace; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 20px; }
+        .auth-input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: white; outline: none; box-sizing: border-box; font-family: monospace; }
+        .auth-input:focus { border-color: var(--accent); }
+        .auth-btn { width: 100%; padding: 15px; background: rgba(255, 71, 87, 0.1); color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; font-weight: bold; letter-spacing: 1px; transition: 0.3s; text-transform: uppercase; }
+        .auth-btn:hover { background: var(--accent); color: white; }
 
-        .terminal-container {
-            width: 100%;
-            max-width: 600px;
-            background: var(--panel);
-            border: 1px solid rgba(0, 210, 255, 0.2);
-            border-radius: 12px;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 210, 255, 0.05);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            position: relative;
-        }
+        /* The Startup Overlay */
+        #startup-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--panel); z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; font-family: monospace; color: var(--accent); transition: opacity 0.8s ease-out; }
+        .loader-text { font-size: 1.1rem; letter-spacing: 2px; margin-bottom: 20px; text-align: center; line-height: 1.5; }
+        .progress-bar { width: 250px; height: 4px; background: rgba(255, 71, 87, 0.1); border-radius: 2px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: scan 1.5s infinite alternate ease-in-out; }
+        @keyframes scan { from { width: 10%; margin-left: 0; } to { width: 30%; margin-left: 70%; } }
 
-        #startup-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--panel);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-family: monospace;
-            color: var(--accent);
-            transition: opacity 0.8s ease-out;
-        }
+        .header { background: rgba(0, 0, 0, 0.4); padding: 15px 20px; border-bottom: 1px solid rgba(255, 71, 87, 0.2); display: flex; justify-content: space-between; align-items: center; }
+        .title { margin: 0; font-size: 1.1rem; font-weight: 600; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; }
+        .status-badge { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .pulse-dot { width: 8px; height: 8px; background-color: var(--alert); border-radius: 50%; box-shadow: 0 0 10px var(--alert); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 71, 87, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); } }
 
-        .loader-text {
-            font-size: 1.1rem;
-            letter-spacing: 2px;
-            margin-bottom: 20px;
-            text-align: center;
-            padding: 0 20px;
-            line-height: 1.5;
-        }
-
-        .progress-bar {
-            width: 250px;
-            height: 4px;
-            background: rgba(0, 210, 255, 0.1);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            width: 50%;
-            background: var(--accent);
-            box-shadow: 0 0 10px var(--accent);
-            animation: scan 1.5s infinite alternate ease-in-out;
-        }
-
-        @keyframes scan { 
-            from { width: 10%; margin-left: 0; } 
-            to { width: 30%; margin-left: 70%; } 
-        }
-
-        .header {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(0, 210, 255, 0.2);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .title {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 600;
-            letter-spacing: 1px;
-            color: var(--accent);
-            text-transform: uppercase;
-        }
-
-        .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--alert);
-            border-radius: 50%;
-            box-shadow: 0 0 10px var(--alert);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 210, 255, 0.4); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 210, 255, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 210, 255, 0); }
-        }
-
-        #chat-box {
-            height: 400px;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            scroll-behavior: smooth;
-        }
-
-        .msg-bubble {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 12px 16px;
-            border-radius: 8px;
-            border-left: 4px solid var(--accent);
-            width: fit-content;
-            max-width: 85%;
-            word-wrap: break-word;
-            animation: fadeIn 0.3s ease-out;
-        }
-
+        #chat-box { flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
+        #chat-box::-webkit-scrollbar { width: 6px; }
+        #chat-box::-webkit-scrollbar-track { background: transparent; }
+        #chat-box::-webkit-scrollbar-thumb { background: rgba(255, 71, 87, 0.3); border-radius: 10px; }
+        
+        .msg-bubble { background: rgba(255, 255, 255, 0.03); padding: 12px 16px; border-radius: 8px; border-left: 4px solid var(--accent); width: fit-content; max-width: 85%; word-wrap: break-word; animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .msg-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 20px; }
+        .sender-id { font-size: 0.8rem; color: var(--accent); font-family: monospace; font-weight: bold; }
+        .hop-tag { font-size: 0.7rem; color: var(--text-muted); font-style: italic; }
+        .msg-text { font-size: 0.95rem; line-height: 1.4; }
 
-        .msg-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-            gap: 20px;
-        }
-
-        .sender-id {
-            font-size: 0.8rem;
-            color: var(--accent);
-            font-family: monospace;
-            font-weight: bold;
-        }
-
-        .hop-tag {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            font-style: italic;
-        }
-
-        .msg-text {
-            font-size: 0.95rem;
-            line-height: 1.4;
-        }
-
-        .input-area {
-            display: flex;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.4);
-            border-top: 1px solid rgba(0, 210, 255, 0.1);
-            gap: 10px;
-        }
-
-        #user-input {
-            width: 110px;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(0, 210, 255, 0.3);
-            border-radius: 6px;
-            color: var(--accent);
-            font-weight: bold;
-            font-family: monospace;
-            outline: none;
-        }
-
-        #msg-input {
-            flex-grow: 1;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            color: white;
-            outline: none;
-        }
-
-        #user-input:focus, #msg-input:focus { border-color: var(--accent); }
-
-        button {
-            padding: 0 20px;
-            background: transparent;
-            color: var(--accent);
-            border: 1px solid var(--accent);
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: 0.3s;
-        }
-
-        button:hover {
-            background: var(--accent);
-            color: var(--bg);
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
-        }
+        .input-area { display: flex; padding: 15px; background: rgba(0, 0, 0, 0.4); border-top: 1px solid rgba(255, 71, 87, 0.1); gap: 10px; }
+        #msg-input { flex-grow: 1; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: white; outline: none; }
+        #msg-input:focus { border-color: var(--accent); }
+        button { padding: 0 20px; background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+        button:hover { background: var(--accent); color: white; box-shadow: 0 0 15px rgba(255, 71, 87, 0.3); }
+        
+        /* User Info Display */
+        .operative-info { font-size: 0.75rem; color: var(--text-muted); font-family: monospace; margin-top: 5px; }
+        .operative-name { color: var(--accent); font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="terminal-container">
+        <!-- SECURITY GATEWAY -->
+        <div id="auth-gateway">
+            <div class="auth-box">
+                <h2 class="auth-title">ENCRYPTED NET</h2>
+                <input type="text" id="auth-username" class="auth-input" placeholder="Operative ID (e.g. abraz)">
+                <input type="password" id="auth-key" class="auth-input" placeholder="Company Security Key">
+                <button class="auth-btn" onclick="joinNetwork()">Initialize Node</button>
+            </div>
+        </div>
+
+        <!-- STARTUP OVERLAY -->
         <div id="startup-overlay">
-            <div class="loader-text" id="loader-msg">SCANNING LOCAL AIRWAVES...<br>INITIALIZING DECENTRALIZED ARCHITECTURE</div>
+            <div class="loader-text" id="loader-msg">SCANNING LOCAL AIRWAVES...<br>VALIDATING SECURITY KEY</div>
             <div class="progress-bar">
                 <div class="progress-fill" id="p-fill"></div>
             </div>
         </div>
 
         <div class="header">
-            <h2 class="title">NEXUS MESH-CORE</h2>
+            <div>
+                <h2 class="title" id="network-title">NEXUS MESH</h2>
+                <div class="operative-info" id="op-display">Operative: <span class="operative-name">N/A</span></div>
+            </div>
             <div class="status-badge">
                 <div class="pulse-dot" id="status-dot"></div>
                 <span id="status-text">SEARCHING...</span>
@@ -248,17 +98,16 @@
         <div id="chat-box">
             <div class="msg-bubble" style="border-left-color: var(--text-muted);">
                 <div class="msg-header">
-                    <span class="sender-id" style="color: var(--text-muted);">@SYSTEM</span>
+                    <span class="sender-id" style="color: var(--text-muted);">SYSTEM</span>
                 </div>
                 <div class="msg-text" style="color: var(--text-muted); font-style: italic;">
-                    Mesh-inspired decentralized communication architecture online. Direct-link and Store-and-forward relay protocols active.
+                    Cryptographic handshake complete. Offline Mesh initialized.
                 </div>
             </div>
         </div>
 
         <div class="input-area">
-            <input type="text" id="user-input" placeholder="Your ID">
-            <input type="text" id="msg-input" placeholder="Broadcast packet..." onkeypress="handleKeyPress(event)" autocomplete="off">
+            <input type="text" id="msg-input" placeholder="Transmit packet... (Use @username for secure DM)" onkeypress="handleKeyPress(event)" autocomplete="off">
             <button onclick="sendMessage()">Send</button>
         </div>
     </div>
@@ -266,8 +115,39 @@
     <script>
         let lastMessageCount = 0;
         let isConnected = false;
+        let pollingInterval = null;
+        let fetchInterval = null;
 
-        document.getElementById('user-input').value = localStorage.getItem('mesh_username') || '';
+        // Auto-fill previous username
+        document.getElementById('auth-username').value = localStorage.getItem('mesh_username') || '';
+
+        // --- NEW: Join Network Logic ---
+        function joinNetwork() {
+            const username = document.getElementById('auth-username').value.trim();
+            const key = document.getElementById('auth-key').value.trim();
+            
+            if (!username || !key) return alert("Please enter both ID and Security Key.");
+
+            localStorage.setItem('mesh_username', username);
+
+            fetch('/join_network', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, network_key: key }) 
+            }).then(() => {
+                // Hide gateway, show scanner
+                document.getElementById('auth-gateway').style.display = 'none';
+                document.getElementById('startup-overlay').style.display = 'flex';
+                
+                // Update UI titles
+                document.getElementById('network-title').innerText = "NET: " + key.toUpperCase();
+                document.querySelector('.operative-name').innerText = "@" + username;
+
+                // Start polling the server
+                pollingInterval = setInterval(checkNetworkStatus, 2000);
+                fetchInterval = setInterval(fetchMessages, 1000);
+            });
+        }
 
         function checkNetworkStatus() {
             fetch('/status')
@@ -283,12 +163,12 @@
                         isConnected = true;
                         fill.style.animation = 'none';
                         fill.style.width = '100%';
-                        msg.innerText = "PEER DISCOVERED. NETWORK LINK ESTABLISHED.";
+                        msg.innerText = "PEER DISCOVERED. SECURE LINK ESTABLISHED.";
                         msg.style.color = "var(--relay)";
                         
-                        statusText.innerText = "Architecture Active";
-                        statusDot.style.backgroundColor = "var(--accent)"; 
-                        statusDot.style.boxShadow = "0 0 10px var(--accent)";
+                        statusText.innerText = "SECURE";
+                        statusDot.style.backgroundColor = "var(--relay)"; 
+                        statusDot.style.boxShadow = "0 0 10px var(--relay)";
                         
                         setTimeout(() => { 
                             overlay.style.opacity = '0'; 
@@ -297,28 +177,22 @@
 
                     } else if (!data.connected && isConnected) {
                         isConnected = false;
-                        statusText.innerText = "PEER LOST. RE-SCANNING...";
+                        statusText.innerText = "SEARCHING...";
                         statusDot.style.backgroundColor = "var(--alert)"; 
                         statusDot.style.boxShadow = "0 0 10px var(--alert)";
                     }
                 });
         }
 
-        setInterval(checkNetworkStatus, 2000);
-
         function sendMessage() {
             const inputField = document.getElementById('msg-input');
-            const userField = document.getElementById('user-input');
             const text = inputField.value.trim();
-            const username = userField.value.trim() || "Anonymous";
             if (!text) return;
-
-            localStorage.setItem('mesh_username', username);
 
             fetch('/send', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: username, message: text }) 
+                body: JSON.stringify({ message: text }) 
             }).then(() => {
                 inputField.value = ''; 
                 fetchMessages(); 
@@ -336,21 +210,16 @@
                         chatBox.innerHTML = chatBox.firstElementChild.outerHTML; 
                         
                         data.forEach(msg => {
-                            const isAlert = msg.text.toLowerCase().includes("help") || msg.text.toLowerCase().includes("evac");
-                            let borderColor = isAlert ? 'var(--alert)' : 'var(--accent)';
-                            let idColor = isAlert ? 'var(--alert)' : 'var(--accent)';
-                            let boxStyle = `border-left-color: ${borderColor};`;
-                            let headerHtml = `<span class="sender-id" style="color: ${idColor};">@${msg.username}</span>`;
-                            
-                            // NEW: Hop Count Logic for the UI
-                            let hopInfo = msg.hops > 0 ? `<span class="hop-tag">Relayed via ${msg.hops} node(s)</span>` : `<span class="hop-tag">Direct Signal</span>`;
+                            let boxStyle = `border-left-color: var(--accent);`;
+                            let headerHtml = `<span class="sender-id" style="color: var(--accent);">@${msg.username}</span>`;
+                            let hopInfo = msg.hops > 0 ? `<span class="hop-tag">Relayed</span>` : `<span class="hop-tag">Direct Radio</span>`;
 
                             if (msg.username === localStorage.getItem('mesh_username')) {
-                                headerHtml = `<span class="sender-id" style="color: #ffffff;">(Me) @${msg.username}</span>`;
+                                headerHtml = `<span class="sender-id" style="color: #ffffff;">(You) @${msg.username}</span>`;
                             }
 
                             if (msg.is_dm) {
-                                headerHtml = `<span class="sender-id" style="color: #ffaa00;">[SECURE RELAY TO @${msg.target}]</span>`;
+                                headerHtml = `<span class="sender-id" style="color: #ffaa00;">[ENCRYPTED DM]</span>`;
                                 boxStyle = `border-left-color: #ffaa00; background: rgba(255, 170, 0, 0.05);`;
                             }
 
@@ -369,7 +238,6 @@
                     }
                 });
         }
-        setInterval(fetchMessages, 1000);
     </script>
 </body>
 </html>
