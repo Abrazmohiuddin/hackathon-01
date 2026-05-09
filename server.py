@@ -15,7 +15,7 @@ last_peer_seen = 0
 seen_messages = set()
 relay_buffer = []
 
-# NEW: The security key that isolates this network from others
+# The security key that isolates this company's network from others
 current_network_key = None 
 
 # --- THE LISTENER & RELAY LOGIC ---
@@ -30,11 +30,10 @@ def udp_listener():
             data, addr = sock.recvfrom(1024)
             packet = json.loads(data.decode('utf-8'))
             
-            # --- SECURITY GATEWAY ---
-            # If we haven't set a key yet, or the packet's key doesn't match ours, drop it completely.
+            # --- COMPANY SECURITY GATEWAY ---
             packet_key = packet.get("network_key")
             if not current_network_key or packet_key != current_network_key:
-                continue
+                continue # Drop packet if it doesn't belong to our company
 
             # Handle Heartbeats
             if packet.get("type") == "heartbeat":
@@ -55,9 +54,7 @@ def udp_listener():
                 
                 packet["ttl"] -= 1
                 packet["hop_count"] += 1
-                
-                if packet["ttl"] <= 0:
-                    continue
+                if packet["ttl"] <= 0: continue
 
                 target = packet.get("target", "ALL")
                 if target == "ALL" or target.lower() == my_current_username.lower():
@@ -87,13 +84,12 @@ def heartbeat_emitter():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     while True:
-        # Only emit heartbeats if we have joined a network
         if current_network_key:
             try:
                 payload = json.dumps({
                     "type": "heartbeat", 
                     "node_id": my_node_id,
-                    "network_key": current_network_key # Tag it with our network
+                    "network_key": current_network_key
                 })
                 sock.sendto(payload.encode('utf-8'), ('255.255.255.255', 5555))
             except:
@@ -109,14 +105,20 @@ def get_messages(): return jsonify(message_history)
 @app.route('/status')
 def get_status(): return jsonify({"connected": (time.time() - last_peer_seen) < 6})
 
-# NEW: Route to accept the Company Key from the UI
+# --- NEW: Company Setup Route ---
 @app.route('/join_network', methods=['POST'])
 def join_network():
     global current_network_key, my_current_username
     data = request.json
-    current_network_key = data.get('network_key')
-    my_current_username = data.get('username', 'Anonymous')
-    return jsonify({"status": "Network Joined", "key": current_network_key})
+    
+    company_name = data.get('company', '').strip().upper()
+    security_key = data.get('key', '').strip()
+    my_current_username = data.get('username', 'Anonymous').strip()
+    
+    # Create an unbreakable isolation key by combining company name and password
+    current_network_key = f"{company_name}::{security_key}"
+    
+    return jsonify({"status": "Network Configured", "company": company_name})
 
 @app.route('/send', methods=['POST'])
 def send_message():
@@ -141,7 +143,7 @@ def send_message():
         payload = {
             "type": "chat",
             "msg_id": new_msg_id,
-            "network_key": current_network_key, # NEW: Lock message to this network
+            "network_key": current_network_key, 
             "username": my_current_username,
             "target": target_user,
             "text": msg_text,
