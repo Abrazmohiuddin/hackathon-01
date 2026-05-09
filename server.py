@@ -22,11 +22,12 @@ relay_buffer = []
 
 current_network_key = None 
 
-# --- EDGE AI COMPUTE NODE (OLLAMA INTERCEPTOR) ---
-def query_ollama(prompt, network_key, sender_username, requester_node_id):
-    print(f"\n[*] AI Triggered by @{sender_username}. Generating local response...")
+# --- LOCAL EDGE AI COMPUTE NODE ---
+def query_local_ollama(prompt, sender_username):
+    print(f"\n[*] Local AI Triggered by @{sender_username}. Generating response...")
     
     url = "http://localhost:11434/api/generate"
+    # Force short answers for radio efficiency
     modified_prompt = prompt + " (Keep your answer strictly under 50 words.)"
     data = {"model": "llama3.2", "prompt": modified_prompt, "stream": False} 
     
@@ -36,38 +37,18 @@ def query_ollama(prompt, network_key, sender_username, requester_node_id):
         result = json.loads(response.read().decode('utf-8'))
         ai_reply = result.get('response', 'Error formatting AI response.')
         
-        ai_msg_id = str(uuid.uuid4())
-        seen_messages.add(ai_msg_id)
-        
-        payload = {
-            "type": "chat",
-            "msg_id": ai_msg_id,
-            "network_key": network_key,
+        # Append locally only (Saves network bandwidth)
+        message_history.append({
             "username": "NEXUS-AI",
-            "target": sender_username,
-            "target_node_id": requester_node_id,
             "text": ai_reply,
-            "ttl": 5,
-            "hop_count": 0
-        }
-
-        # If the host laptop asked the question, display it locally
-        if requester_node_id == my_node_id:
-            message_history.append({
-                "username": "NEXUS-AI",
-                "text": ai_reply,
-                "is_dm": True,
-                "target": sender_username,
-                "hops": 0
-            })
-        
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.sendto(json.dumps(payload).encode('utf-8'), ('255.255.255.255', 5555))
-        sock.close()
-        print(f"[+] AI Response successfully routed to node: {requester_node_id}.")
+            "is_dm": True,
+            "target": sender_username,
+            "hops": 0
+        })
+        print(f"[+] Local AI Response generated successfully.")
         
     except Exception as e:
+        print(f"[!] AI Error: Make sure Ollama is running.")
         pass
 
 # --- THE LISTENER & RELAY LOGIC ---
@@ -108,15 +89,6 @@ def udp_listener():
                 target = packet.get("target", "ALL")
                 target_node_id = packet.get("target_node_id")
                 
-                # Intercept messages for the AI from OTHER nodes
-                if target.upper() == "NEXUS-AI":
-                    requester_node_id = packet.get("sender_node_id")
-                    threading.Thread(
-                        target=query_ollama,
-                        args=(packet["text"], packet["network_key"], packet["username"], requester_node_id),
-                        daemon=True
-                    ).start()
-
                 # Process normal messages
                 should_display = (
                     target == "ALL"
@@ -169,7 +141,14 @@ def get_status(): return jsonify({"connected": (time.time() - last_peer_seen) < 
 
 @app.route('/join_network', methods=['POST'])
 def join_network():
-    global current_network_key, my_current_username
+    global current_network_key, my_current_username, message_history, seen_messages, relay_buffer, last_peer_seen
+    
+    # CRITICAL FIX: WIPE DATA WHEN SWITCHING NETWORKS
+    message_history.clear()
+    seen_messages.clear()
+    relay_buffer.clear()
+    last_peer_seen = 0
+    
     data = request.json
     action = data.get('action', 'public')
     my_current_username = data.get('username', 'Anonymous').strip()
@@ -178,17 +157,12 @@ def join_network():
         current_network_key = "PUBLIC::OPEN_MESH_NO_KEY"
         return jsonify({"status": "Public Mesh Connected", "company": "PUBLIC"})
     
-    elif action == 'create':
+    elif action == 'create' or action == 'join':
         company_name = data.get('company', '').strip().upper()
         security_key = data.get('key', '').strip()
         current_network_key = f"{company_name}::{security_key}"
         return jsonify({"status": "Mesh Initialized & Secured", "company": company_name})
         
-    elif action == 'join':
-        company_name = data.get('company', '').strip().upper()
-        security_key = data.get('key', '').strip()
-        current_network_key = f"{company_name}::{security_key}"
-        return jsonify({"status": "Connected via Cryptographic Handshake", "company": company_name})
     return jsonify({"error": "Invalid action"}), 400
 
 
@@ -211,13 +185,13 @@ def send_message():
             if len(parts) > 1:
                 target_user = parts[0][1:]; msg_text = parts[1]
                 
-        # This allows the host laptop to ask its own brain questions
+        # CRITICAL FIX: LOCAL AI
         if target_user.upper() == "NEXUS-AI":
-            threading.Thread(
-                target=query_ollama,
-                args=(msg_text, current_network_key, my_current_username, my_node_id),
-                daemon=True
-            ).start()
+            # Add user's prompt to screen
+            message_history.append({"username": my_current_username, "text": msg_text, "is_dm": True, "target": target_user, "hops": 0})
+            # Trigger local model silently
+            threading.Thread(target=query_local_ollama, args=(msg_text, my_current_username), daemon=True).start()
+            return jsonify({"status": "Sent to Local AI"})
         
         payload = {
             "type": "chat", "msg_id": new_msg_id, "network_key": current_network_key, 
