@@ -27,8 +27,6 @@ def query_ollama(prompt, network_key, sender_username, requester_node_id):
     print(f"\n[*] AI Triggered by @{sender_username}. Generating local response...")
     
     url = "http://localhost:11434/api/generate"
-    
-    # We secretly force the AI to keep answers short so they survive the radio transmission
     modified_prompt = prompt + " (Keep your answer strictly under 50 words.)"
     data = {"model": "llama3.2", "prompt": modified_prompt, "stream": False} 
     
@@ -70,8 +68,6 @@ def query_ollama(prompt, network_key, sender_username, requester_node_id):
         print(f"[+] AI Response successfully routed to node: {requester_node_id}.")
         
     except Exception as e:
-        # IMPORTANT: We MUST pass silently here. 
-        # If we broadcast an error, every laptop without Ollama will spam the network!
         pass
 
 # --- THE LISTENER & RELAY LOGIC ---
@@ -83,7 +79,7 @@ def udp_listener():
     
     while True:
         try:
-            data, addr = sock.recvfrom(65535) # Expanded mail slot
+            data, addr = sock.recvfrom(65535) 
             packet = json.loads(data.decode('utf-8'))
             
             packet_key = packet.get("network_key")
@@ -121,7 +117,7 @@ def udp_listener():
                         daemon=True
                     ).start()
 
-                # Process normal messages (Only display if it's for ME)
+                # Process normal messages
                 should_display = (
                     target == "ALL"
                     or target_node_id == my_node_id
@@ -175,11 +171,26 @@ def get_status(): return jsonify({"connected": (time.time() - last_peer_seen) < 
 def join_network():
     global current_network_key, my_current_username
     data = request.json
-    company_name = data.get('company', '').strip().upper()
-    security_key = data.get('key', '').strip()
+    action = data.get('action', 'public')
     my_current_username = data.get('username', 'Anonymous').strip()
-    current_network_key = f"{company_name}::{security_key}"
-    return jsonify({"status": "Network Configured", "company": company_name})
+
+    if action == 'public':
+        current_network_key = "PUBLIC::OPEN_MESH_NO_KEY"
+        return jsonify({"status": "Public Mesh Connected", "company": "PUBLIC"})
+    
+    elif action == 'create':
+        company_name = data.get('company', '').strip().upper()
+        security_key = data.get('key', '').strip()
+        current_network_key = f"{company_name}::{security_key}"
+        return jsonify({"status": "Mesh Initialized & Secured", "company": company_name})
+        
+    elif action == 'join':
+        company_name = data.get('company', '').strip().upper()
+        security_key = data.get('key', '').strip()
+        current_network_key = f"{company_name}::{security_key}"
+        return jsonify({"status": "Connected via Cryptographic Handshake", "company": company_name})
+    return jsonify({"error": "Invalid action"}), 400
+
 
 @app.route('/send', methods=['POST'])
 def send_message():
