@@ -4,7 +4,7 @@ import threading
 import json
 import time
 import uuid
-import urllib.request # NEW: For talking to local Ollama
+import urllib.request 
 from flask import Flask, render_template, request, jsonify
 
 # --- BULLETPROOF FOLDER FIX ---
@@ -25,15 +25,15 @@ current_network_key = None
 
 # --- EDGE AI COMPUTE NODE (OLLAMA INTERCEPTOR) ---
 def query_ollama(prompt, network_key, sender_username):
-    print(f"[*] AI Triggered by @{sender_username}. Generating local response...")
+    print(f"\n[*] AI Triggered by @{sender_username}. Generating local response...")
     
     url = "http://localhost:11434/api/generate"
-    # CHANGE "llama3" BELOW TO WHATEVER MODEL YOU DOWNLOADED (e.g., "phi3", "mistral")
-    data = {"model": "llama3", "prompt": prompt, "stream": False} 
+    # Tied exactly to the model installed on your machine
+    data = {"model": "llama3.2", "prompt": prompt, "stream": False} 
     
     try:
         req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
-        response = urllib.request.urlopen(req, timeout=60)
+        response = urllib.request.urlopen(req, timeout=300)
         result = json.loads(response.read().decode('utf-8'))
         ai_reply = result.get('response', 'Error formatting AI response.')
         
@@ -46,11 +46,19 @@ def query_ollama(prompt, network_key, sender_username):
             "msg_id": ai_msg_id,
             "network_key": network_key,
             "username": "NEXUS-AI",
-            "target": sender_username, # Target the user who asked
+            "target": sender_username, 
             "text": ai_reply,
             "ttl": 5,
             "hop_count": 0
         }
+
+        message_history.append({
+            "username": "NEXUS-AI",
+            "text": ai_reply,
+            "is_dm": True,
+            "target": sender_username,
+            "hops": 0
+        })
         
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -59,9 +67,15 @@ def query_ollama(prompt, network_key, sender_username):
         print(f"[+] AI Response successfully routed to @{sender_username}.")
         
     except Exception as e:
-        # If Ollama is NOT running on this specific laptop, fail silently. 
-        # This is genius because it allows only the "Heavy" laptops to act as the Brain.
-        pass
+        error_text = f"Ollama error: {e}"
+        print(f"[!] {error_text}")
+        message_history.append({
+            "username": "NEXUS-AI",
+            "text": error_text,
+            "is_dm": True,
+            "target": sender_username,
+            "hops": 0
+        })
 
 # --- THE LISTENER & RELAY LOGIC ---
 def udp_listener():
@@ -72,7 +86,7 @@ def udp_listener():
     
     while True:
         try:
-            data, addr = sock.recvfrom(1024)
+            data, addr = sock.recvfrom(65535)
             packet = json.loads(data.decode('utf-8'))
             
             # --- SECURITY GATEWAY ---
@@ -103,9 +117,8 @@ def udp_listener():
 
                 target = packet.get("target", "ALL")
                 
-                # --- NEW: INTERCEPT MESSAGES FOR THE AI ---
+                # Intercept messages for the AI from OTHER nodes
                 if target.upper() == "NEXUS-AI":
-                    # We spin this off into a background thread so the whole mesh doesn't freeze while the AI thinks
                     threading.Thread(target=query_ollama, args=(packet["text"], packet["network_key"], packet["username"]), daemon=True).start()
 
                 # Process normal messages
@@ -180,6 +193,11 @@ def send_message():
             parts = raw_text.split(" ", 1)
             if len(parts) > 1:
                 target_user = parts[0][1:]; msg_text = parts[1]
+                
+        # --- NEW: AI LOCAL TRIGGER FIX ---
+        # This allows the host laptop to ask its own brain questions
+        if target_user.upper() == "NEXUS-AI":
+            threading.Thread(target=query_ollama, args=(msg_text, current_network_key, my_current_username), daemon=True).start()
         
         payload = {
             "type": "chat", "msg_id": new_msg_id, "network_key": current_network_key, 
