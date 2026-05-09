@@ -1,3 +1,4 @@
+import os
 import socket
 import threading
 import json
@@ -5,7 +6,11 @@ import time
 import uuid
 from flask import Flask, render_template, request, jsonify
 
-app = Flask(__name__)
+# --- BULLETPROOF FOLDER FIX ---
+# This forces Flask to look exactly in the same folder as this Python script
+base_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(base_dir, 'templates')
+app = Flask(__name__, template_folder=template_dir)
 
 # --- ARCHITECTURE STATE ---
 message_history = []
@@ -105,7 +110,7 @@ def get_messages(): return jsonify(message_history)
 @app.route('/status')
 def get_status(): return jsonify({"connected": (time.time() - last_peer_seen) < 6})
 
-# --- NEW: Company Setup Route ---
+# --- Company Setup Route ---
 @app.route('/join_network', methods=['POST'])
 def join_network():
     global current_network_key, my_current_username
@@ -169,4 +174,5 @@ def send_message():
 if __name__ == '__main__':
     threading.Thread(target=udp_listener, daemon=True).start()
     threading.Thread(target=heartbeat_emitter, daemon=True).start()
-    app.run(host='0.0.0.0', port=5000)
+    print("\n[*] SERVER ONLINE: Open http://127.0.0.1:5000 in your browser\n")
+    app.run(host='0.0.0.0', port=5000, debug=False)
